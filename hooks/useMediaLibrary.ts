@@ -1,36 +1,135 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import * as MediaLibrary from 'expo-media-library';
+import * as FileSystem from 'expo-file-system';
+import { usePlayerStore } from '@/store/playerStore';
 
 export function useMediaLibrary() {
-  const [assets, setAssets] = useState<MediaLibrary.Asset[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+	const [assets, setAssets] = useState<any[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
+	const { cleanup } = usePlayerStore();
+	// console.log('assets', assets);
 
-  useEffect(() => {
-    async function loadMediaLibrary() {
-      try {
-        const permission = await MediaLibrary.requestPermissionsAsync();
-        if (!permission.granted) {
-          setError('Permission to access media library was denied');
-          setLoading(false);
-          return;
-        }
+	const loadMedia = async () => {
+		try {
+			const { status } = await MediaLibrary.requestPermissionsAsync();
+			if (status !== 'granted') {
+				setError('Permission to access media library was denied');
+				return;
+			}
 
-        const media = await MediaLibrary.getAssetsAsync({
-          mediaType: MediaLibrary.MediaType.audio,
-          first: 1000,
-        });
+			// First get the total count of audio files
+			const { totalCount } = await MediaLibrary.getAssetsAsync({
+				mediaType: MediaLibrary.MediaType.audio,
+				first: 1,
+			});
 
-        setAssets(media.assets);
-        setLoading(false);
-      } catch (err) {
-        setError('Error loading media library');
-        setLoading(false);
-      }
-    }
+			// Then fetch all assets in batches
+			const batchSize = 100;
+			let allAssets: MediaLibrary.Asset[] = [];
+			let hasNextPage = true;
+			let endCursor: string | undefined;
 
-    loadMediaLibrary();
-  }, []);
+			while (hasNextPage) {
+				const result = await MediaLibrary.getAssetsAsync({
+					mediaType: MediaLibrary.MediaType.audio,
+					sortBy: MediaLibrary.SortBy.creationTime,
+					first: batchSize,
+					after: endCursor,
+				});
 
-  return { assets, loading, error };
+				allAssets = [...allAssets, ...result.assets];
+				hasNextPage = result.hasNextPage;
+				endCursor = result.endCursor;
+
+				if (!hasNextPage || allAssets.length >= totalCount) {
+					break;
+				}
+			}
+
+			const assetsWithMetadata = await Promise.all(
+				allAssets.map(async (asset) => {
+					try {
+						// Get metadata from the file
+						const metadata = await MediaLibrary.getAssetInfoAsync(asset.id, {
+							shouldDownloadFromNetwork: true,
+						});
+
+						// Get artwork if available
+						let artwork = null;
+						if (metadata.localUri) {
+							const artworkPath = `${FileSystem.cacheDirectory}artwork_${asset.id}.jpg`;
+							try {
+								await FileSystem.copyAsync({
+									from: metadata.localUri,
+									to: artworkPath,
+								});
+								artwork = artworkPath;
+							} catch (e) {
+								console.warn('Could not extract artwork:', e);
+							}
+						}
+
+						// Extract metadata from the asset
+						const title = asset.filename.replace(/\.[^/.]+$/, ''); // Remove file extension
+						const artist = (metadata as any).artist || 'Unknown Artist';
+						const album = (metadata as any).album || 'Unknown Album';
+
+						return {
+							...asset,
+							title,
+							artist,
+							album,
+							artwork,
+							duration: metadata.duration || 0,
+						};
+					} catch (e) {
+						console.warn('Error getting metadata for asset:', e);
+						return {
+							...asset,
+							title: asset.filename.replace(/\.[^/.]+$/, ''),
+							artist: 'Unknown Artist',
+							album: 'Unknown Album',
+							duration: 0,
+						};
+					}
+				})
+			);
+
+			setAssets(assetsWithMetadata);
+		} catch (e) {
+			setError('Failed to load media library');
+			console.error(e);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	useEffect(() => {
+		loadMedia();
+	}, []);
+
+	const refresh = async () => {
+		setLoading(true);
+		await loadMedia();
+	};
+
+	const handleTrackPress = async (asset: any) => {
+		// Clean up current track before playing new one
+		await cleanup();
+
+		const track = {
+			id: asset.id,
+			title: asset.title,
+			artist: asset.artist,
+			album: asset.album,
+			duration: asset.duration * 1000,
+			uri: asset.uri,
+			artwork: asset.artwork,
+		};
+
+		return track;
+	};
+
+	return { assets, loading, error, refresh, handleTrackPress };
 }
