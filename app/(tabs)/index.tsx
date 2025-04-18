@@ -1,23 +1,35 @@
 import { View, Text, StyleSheet, FlatList, Pressable } from 'react-native';
 import { useMediaLibrary } from '@/hooks/useMediaLibrary';
 import { usePlayerStore } from '@/store/playerStore';
+import { useThemeStore, themes } from '@/store/themeStore';
 import { Music } from 'lucide-react-native';
+import Animated, { 
+  useAnimatedStyle, 
+  withSpring,
+  withSequence,
+} from 'react-native-reanimated';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export default function LibraryScreen() {
   const { assets, loading, error } = useMediaLibrary();
   const { setCurrentTrack, addToQueue } = usePlayerStore();
+  const { currentTheme } = useThemeStore();
+  const theme = themes[currentTheme];
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.loadingText}>Loading your library...</Text>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <Text style={[styles.loadingText, { color: theme.text }]}>
+          Loading your library...
+        </Text>
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
         <Text style={styles.errorText}>{error}</Text>
       </View>
     );
@@ -38,25 +50,30 @@ export default function LibraryScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Your Library</Text>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <Text style={[styles.title, { color: theme.text }]}>Your Library</Text>
       <FlatList
         data={assets}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <Pressable
-            style={styles.trackItem}
+          <AnimatedPressable
+            style={[
+              styles.trackItem,
+              { borderBottomColor: theme.secondary },
+            ]}
             onPress={() => handleTrackPress(item)}>
-            <View style={styles.trackIcon}>
-              <Music color="#fff" size={24} />
+            <View style={[styles.trackIcon, { backgroundColor: theme.primary }]}>
+              <Music color={theme.text} size={24} />
             </View>
             <View style={styles.trackInfo}>
-              <Text style={styles.trackTitle} numberOfLines={1}>
+              <Text style={[styles.trackTitle, { color: theme.text }]} numberOfLines={1}>
                 {item.filename}
               </Text>
-              <Text style={styles.trackArtist}>Unknown Artist</Text>
+              <Text style={[styles.trackArtist, { color: theme.secondary }]}>
+                Unknown Artist
+              </Text>
             </View>
-          </Pressable>
+          </AnimatedPressable>
         )}
       />
     </View>
@@ -66,18 +83,15 @@ export default function LibraryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
     paddingTop: 60,
   },
   title: {
     fontSize: 34,
     fontWeight: 'bold',
-    color: '#fff',
     marginBottom: 20,
     paddingHorizontal: 20,
   },
   loadingText: {
-    color: '#fff',
     fontSize: 16,
     textAlign: 'center',
   },
@@ -91,12 +105,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#222',
   },
   trackIcon: {
     width: 48,
     height: 48,
-    backgroundColor: '#333',
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -106,12 +118,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   trackTitle: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
   trackArtist: {
-    color: '#999',
     fontSize: 14,
     marginTop: 4,
   },

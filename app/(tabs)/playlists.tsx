@@ -1,7 +1,18 @@
 import { View, Text, StyleSheet, FlatList, Pressable } from 'react-native';
 import { ListMusic, Plus } from 'lucide-react-native';
+import { useThemeStore, themes } from '@/store/themeStore';
+import Animated, {
+  useAnimatedStyle,
+  withSpring,
+  withSequence,
+} from 'react-native-reanimated';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export default function PlaylistsScreen() {
+  const { currentTheme } = useThemeStore();
+  const theme = themes[currentTheme];
+
   const playlists = [
     { id: '1', name: 'Favorites', trackCount: 12 },
     { id: '2', name: 'Recently Added', trackCount: 25 },
@@ -9,29 +20,38 @@ export default function PlaylistsScreen() {
   ];
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Playlists</Text>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <Text style={[styles.title, { color: theme.text }]}>Playlists</Text>
       
-      <Pressable style={styles.createButton}>
-        <Plus color="#fff" size={24} />
-        <Text style={styles.createButtonText}>Create New Playlist</Text>
-      </Pressable>
+      <AnimatedPressable 
+        style={[styles.createButton, { backgroundColor: theme.primary }]}>
+        <Plus color={theme.text} size={24} />
+        <Text style={[styles.createButtonText, { color: theme.text }]}>
+          Create New Playlist
+        </Text>
+      </AnimatedPressable>
 
       <FlatList
         data={playlists}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <Pressable style={styles.playlistItem}>
-            <View style={styles.playlistIcon}>
-              <ListMusic color="#fff" size={24} />
+          <AnimatedPressable 
+            style={[
+              styles.playlistItem,
+              { borderBottomColor: theme.secondary },
+            ]}>
+            <View style={[styles.playlistIcon, { backgroundColor: theme.primary }]}>
+              <ListMusic color={theme.text} size={24} />
             </View>
             <View style={styles.playlistInfo}>
-              <Text style={styles.playlistName}>{item.name}</Text>
-              <Text style={styles.trackCount}>
+              <Text style={[styles.playlistName, { color: theme.text }]}>
+                {item.name}
+              </Text>
+              <Text style={[styles.trackCount, { color: theme.secondary }]}>
                 {item.trackCount} tracks
               </Text>
             </View>
-          </Pressable>
+          </AnimatedPressable>
         )}
       />
     </View>
@@ -41,27 +61,23 @@ export default function PlaylistsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
     paddingTop: 60,
   },
   title: {
     fontSize: 34,
     fontWeight: 'bold',
-    color: '#fff',
     marginBottom: 20,
     paddingHorizontal: 20,
   },
   createButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#333',
     margin: 20,
     padding: 16,
     borderRadius: 12,
     gap: 12,
   },
   createButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -70,12 +86,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#222',
   },
   playlistIcon: {
     width: 48,
     height: 48,
-    backgroundColor: '#333',
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -85,12 +99,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   playlistName: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
   trackCount: {
-    color: '#999',
     fontSize: 14,
     marginTop: 4,
   },

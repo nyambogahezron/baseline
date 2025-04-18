@@ -1,5 +1,5 @@
-import { View, Text, StyleSheet, Dimensions, Pressable } from 'react-native';
-import { Play, Pause, SkipBack, SkipForward, Music, Volume2, ChevronDown } from 'lucide-react-native';
+import { View, Text, StyleSheet, Dimensions, Pressable, Image } from 'react-native';
+import { Play, Pause, SkipBack, SkipForward, Music, ChevronDown } from 'lucide-react-native';
 import Animated, {
   useAnimatedStyle,
   withSpring,
@@ -14,7 +14,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { usePlayerStore } from '@/store/playerStore';
+import { useThemeStore, themes } from '@/store/themeStore';
 import { useCallback, useEffect } from 'react';
+import Visualizer from './Visualizer';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 const MAX_TRANSLATE_Y = -SCREEN_HEIGHT + 50;
@@ -29,17 +31,17 @@ export default function FullScreenPlayer() {
     playbackPosition,
     duration,
     seekTo,
-    volume,
-    setVolume,
     isFullScreenVisible,
     hideFullScreen,
   } = usePlayerStore();
 
+  const { currentTheme } = useThemeStore();
+  const theme = themes[currentTheme];
+
   const translateY = useSharedValue(0);
   const context = useSharedValue({ y: 0 });
-  const active = useSharedValue(false);
-  const scale = useSharedValue(1);
   const rotation = useSharedValue(0);
+  const scale = useSharedValue(1);
 
   useEffect(() => {
     if (isFullScreenVisible) {
@@ -86,6 +88,13 @@ export default function FullScreenPlayer() {
       scale.value = withSpring(1);
     }
   }, [isPlaying]);
+
+  const formatTime = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
 
   const gesture = Gesture.Pan()
     .onStart(() => {
@@ -154,14 +163,7 @@ export default function FullScreenPlayer() {
     const progress = (playbackPosition / duration) * 100;
     return {
       width: `${progress}%`,
-      transform: [
-        {
-          scaleX: withSpring(1, {
-            damping: 15,
-            stiffness: 120,
-          }),
-        },
-      ],
+      backgroundColor: theme.accent,
     };
   });
 
@@ -169,34 +171,52 @@ export default function FullScreenPlayer() {
 
   return (
     <GestureDetector gesture={gesture}>
-      <Animated.View style={[styles.container, rStyle]}>
+      <Animated.View 
+        style={[
+          styles.container, 
+          rStyle,
+          { backgroundColor: theme.background }
+        ]}>
         <View style={styles.header}>
           <Pressable onPress={hideFullScreen}>
-            <ChevronDown color="#fff" size={24} />
+            <ChevronDown color={theme.text} size={24} />
           </Pressable>
         </View>
         
         <View style={styles.content}>
           <Animated.View style={[styles.artwork, artworkStyle]}>
-            <Music color="#fff" size={80} />
+            {currentTrack.artwork ? (
+              <Image
+                source={{ uri: currentTrack.artwork }}
+                style={styles.artworkImage}
+              />
+            ) : (
+              <Music color={theme.text} size={80} />
+            )}
           </Animated.View>
 
           <View style={styles.trackInfo}>
-            <Text style={styles.title}>{currentTrack.title}</Text>
-            <Text style={styles.artist}>{currentTrack.artist}</Text>
+            <Text style={[styles.title, { color: theme.text }]}>
+              {currentTrack.title}
+            </Text>
+            <Text style={[styles.artist, { color: theme.secondary }]}>
+              {currentTrack.artist}
+            </Text>
           </View>
+
+          <Visualizer />
 
           <GestureDetector gesture={seekGesture}>
             <View style={styles.progressContainer}>
-              <View style={styles.progressTrack}>
+              <View style={[styles.progressTrack, { backgroundColor: theme.secondary }]}>
                 <Animated.View style={[styles.progressBar, progressStyle]} />
               </View>
               <View style={styles.progressLabels}>
-                <Text style={styles.progressText}>
-                  {Math.floor((playbackPosition / duration) * 100)}%
+                <Text style={[styles.progressText, { color: theme.secondary }]}>
+                  {formatTime(playbackPosition)}
                 </Text>
-                <Text style={styles.progressText}>
-                  {Math.floor((duration - playbackPosition) / 1000)}s remaining
+                <Text style={[styles.progressText, { color: theme.secondary }]}>
+                  {formatTime(duration)}
                 </Text>
               </View>
             </View>
@@ -204,17 +224,19 @@ export default function FullScreenPlayer() {
 
           <View style={styles.controls}>
             <Pressable onPress={previousTrack} style={styles.controlButton}>
-              <SkipBack color="#fff" size={32} />
+              <SkipBack color={theme.text} size={32} />
             </Pressable>
-            <Pressable onPress={togglePlayback} style={styles.playButton}>
+            <Pressable 
+              onPress={togglePlayback} 
+              style={[styles.playButton, { backgroundColor: theme.primary }]}>
               {isPlaying ? (
-                <Pause color="#fff" size={32} />
+                <Pause color={theme.text} size={32} />
               ) : (
-                <Play color="#fff" size={32} />
+                <Play color={theme.text} size={32} />
               )}
             </Pressable>
             <Pressable onPress={nextTrack} style={styles.controlButton}>
-              <SkipForward color="#fff" size={32} />
+              <SkipForward color={theme.text} size={32} />
             </Pressable>
           </View>
         </View>
@@ -230,7 +252,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: SCREEN_HEIGHT,
-    backgroundColor: '#000',
     zIndex: 999,
   },
   header: {
@@ -253,19 +274,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 40,
+    overflow: 'hidden',
+  },
+  artworkImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
   trackInfo: {
     alignItems: 'center',
     marginBottom: 40,
   },
   title: {
-    color: '#fff',
     fontSize: 24,
     fontWeight: 'bold',
     textAlign: 'center',
   },
   artist: {
-    color: '#999',
     fontSize: 18,
     marginTop: 8,
     textAlign: 'center',
@@ -276,13 +301,11 @@ const styles = StyleSheet.create({
   },
   progressTrack: {
     height: 4,
-    backgroundColor: '#333',
     borderRadius: 2,
     overflow: 'hidden',
   },
   progressBar: {
     height: '100%',
-    backgroundColor: '#fff',
     borderRadius: 2,
   },
   progressLabels: {
@@ -291,7 +314,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   progressText: {
-    color: '#999',
     fontSize: 14,
   },
   controls: {
@@ -308,7 +330,6 @@ const styles = StyleSheet.create({
   playButton: {
     width: 80,
     height: 80,
-    backgroundColor: '#333',
     borderRadius: 40,
     alignItems: 'center',
     justifyContent: 'center',
