@@ -14,7 +14,9 @@
 	},
 	"dependencies": {
 		"@lucide/lab": "^0.1.2",
+		"@react-native-async-storage/async-storage": "1.23.1",
 		"@react-navigation/bottom-tabs": "^7.2.0",
+		"@react-navigation/material-top-tabs": "^7.2.10",
 		"@react-navigation/native": "^7.0.14",
 		"expo": "^52.0.46",
 		"expo-av": "~15.0.2",
@@ -28,14 +30,17 @@
 		"expo-splash-screen": "^0.29.24",
 		"expo-status-bar": "~2.0.1",
 		"lucide-react-native": "^0.488.0",
+		"moti": "^0.30.0",
 		"react": "18.3.1",
 		"react-dom": "18.3.1",
 		"react-native": "0.76.9",
 		"react-native-gesture-handler": "~2.20.2",
+		"react-native-pager-view": "6.5.1",
 		"react-native-reanimated": "~3.16.1",
 		"react-native-safe-area-context": "4.12.0",
 		"react-native-screens": "~4.4.0",
 		"react-native-svg": "15.8.0",
+		"react-native-track-player": "^4.1.1",
 		"react-native-url-polyfill": "^2.0.0",
 		"zustand": "^4.5.6"
 	},
@@ -46,6 +51,18 @@
 		"jest-expo": "~52.0.6",
 		"react-test-renderer": "18.3.1",
 		"typescript": "^5.8.3"
+	},
+	"expo": {
+		"doctor": {
+			"reactNativeDirectoryCheck": {
+				"enabled": true,
+				"exclude": [
+					"lucide-react-native",
+					"@lucide/lab"
+				],
+				"listUnknownPackages": true
+			}
+		}
 	},
 	"private": true
 }

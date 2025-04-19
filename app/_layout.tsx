@@ -5,6 +5,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import PlayerBar from '@/components/PlayerBar';
 import FullScreenPlayer from '@/components/FullScreenPlayer';
 import * as SplashScreen from 'expo-splash-screen';
+import { setupPlayer } from '@/services/playerNotification';
+import { themes, useThemeStore } from '@/store/themeStore';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -15,10 +17,16 @@ SplashScreen.setOptions({
 
 export default function RootLayout() {
 	const [appIsReady, setAppIsReady] = React.useState(false);
+	const { currentTheme } = useThemeStore();
+	const theme = themes[currentTheme];
 
 	React.useEffect(() => {
 		async function prepare() {
 			try {
+				// Initialize TrackPlayer
+				await setupPlayer();
+
+				// Wait for other resources to load
 				await new Promise((resolve) => setTimeout(resolve, 1000));
 			} catch (e) {
 				console.warn(e);
@@ -51,7 +59,7 @@ export default function RootLayout() {
 			</Stack>
 			<PlayerBar />
 			<FullScreenPlayer />
-			<StatusBar style='light' />
+			<StatusBar style='light' backgroundColor={theme.background} />
 		</GestureHandlerRootView>
 	);
 }

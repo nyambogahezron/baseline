@@ -164,7 +164,7 @@ export default function ArtistsScreen() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		paddingTop: 60,
+		paddingTop: 2,
 	},
 	title: {
 		fontSize: 34,

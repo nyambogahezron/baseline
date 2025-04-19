@@ -133,7 +133,6 @@ const TrackItem = ({
 
 			<Modal
 				visible={showMenu}
-				transparent
 				animationType='slide'
 				onRequestClose={() => setShowMenu(false)}
 			>
@@ -232,7 +231,7 @@ export default function LibraryScreen() {
 
 	return (
 		<View style={[styles.container, { backgroundColor: theme.background }]}>
-			<Text style={[styles.title, { color: theme.text }]}>Your Library</Text>
+			{/* <Text style={[styles.title, { color: theme.text }]}>Your Library</Text> */}
 			<FlatList
 				data={assets}
 				keyExtractor={(item) => item.id}
@@ -254,7 +253,7 @@ export default function LibraryScreen() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		paddingTop: 60,
+		paddingTop: 2,
 	},
 	title: {
 		fontSize: 34,
@@ -277,8 +276,8 @@ const styles = StyleSheet.create({
 	trackItem: {
 		flexDirection: 'row',
 		alignItems: 'center',
-		padding: 16,
-		borderBottomWidth: 1,
+		paddingHorizontal: 2,
+		paddingVertical: 16,
 		transform: [{ translateY: 50 }, { scale: 0.8 }],
 		opacity: 0,
 	},
@@ -307,8 +306,7 @@ const styles = StyleSheet.create({
 		marginTop: 4,
 	},
 	menuButton: {
-		padding: 8,
-		marginLeft: 8,
+		paddingLeft: 8,
 	},
 	modalOverlay: {
 		flex: 1,
@@ -319,6 +317,7 @@ const styles = StyleSheet.create({
 		borderTopLeftRadius: 20,
 		borderTopRightRadius: 20,
 		padding: 20,
+		backgroundColor: '#fff',
 	},
 	bottomSheetHeader: {
 		flexDirection: 'row',

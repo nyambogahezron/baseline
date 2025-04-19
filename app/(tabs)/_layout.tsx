@@ -1,66 +1,148 @@
-import { Tabs } from 'expo-router';
+import { TouchableOpacity, StyleSheet } from 'react-native';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+import LibraryScreen from '.';
+import Playlists from './playlists';
+import ArtistsScreen from './artists';
+import ThemesScreen from './themes';
+import { themes, useThemeStore } from '@/store/themeStore';
 import { Library, ListMusic, Palette, Users } from 'lucide-react-native';
-import { useThemeStore, themes } from '@/store/themeStore';
+import Animated, {
+	FadeInRight,
+	FadeOutRight,
+	LinearTransition,
+} from 'react-native-reanimated';
 
-export default function TabLayout() {
+const Tab = createMaterialTopTabNavigator();
+type tabIcons = {
+	[index: string]: (props: any) => JSX.Element;
+};
+
+function TopTabBar({ state, descriptors, navigation, position }: any) {
 	const { currentTheme } = useThemeStore();
 	const theme = themes[currentTheme];
 
+	const icons: tabIcons = {
+		Home: ({ size = 20, color = theme.text }) => (
+			<Library size={size} color={color} />
+		),
+		Playlist: ({ size = 20, color = theme.text }) => (
+			<ListMusic size={size} color={color} />
+		),
+		Artist: ({ size = 20, color = theme.text }) => (
+			<Users size={size} color={color} />
+		),
+		Theme: ({ size = 20, color = theme.text }) => (
+			<Palette size={size} color={color} />
+		),
+	};
+
 	return (
-		<Tabs
-			screenOptions={{
-				headerShown: false,
-				tabBarStyle: {
-					backgroundColor: theme.background,
-					borderTopColor: theme.secondary,
-					borderTopWidth: 1,
-					elevation: 0,
-					shadowOpacity: 0,
-					height: 60,
-					paddingBottom: 8,
-				},
-				tabBarActiveTintColor: theme.accent,
-				tabBarInactiveTintColor: theme.secondary,
-				tabBarLabelStyle: {
-					fontSize: 12,
-					fontWeight: '600',
-				},
+		<Animated.View
+			layout={LinearTransition.springify().damping(80).stiffness(200)}
+			style={{
+				flexDirection: 'row',
+				backgroundColor: theme.background,
+				padding: 10,
 			}}
 		>
-			<Tabs.Screen
-				name='index'
-				options={{
-					title: 'Library',
-					tabBarIcon: ({ size, color }) => (
-						<Library size={size} color={color} />
-					),
-				}}
-			/>
-			<Tabs.Screen
-				name='artists'
-				options={{
-					title: 'Artists',
-					tabBarIcon: ({ size, color }) => <Users size={size} color={color} />,
-				}}
-			/>
-			<Tabs.Screen
-				name='playlists'
-				options={{
-					title: 'Playlists',
-					tabBarIcon: ({ size, color }) => (
-						<ListMusic size={size} color={color} />
-					),
-				}}
-			/>
-			<Tabs.Screen
-				name='themes'
-				options={{
-					title: 'Themes',
-					tabBarIcon: ({ size, color }) => (
-						<Palette size={size} color={color} />
-					),
-				}}
-			/>
-		</Tabs>
+			{state.routes.map((route: any, index: number) => {
+				const { options } = descriptors[route.key];
+				const label =
+					options.tabBarLabel !== undefined
+						? options.tabBarLabel
+						: options.title !== undefined
+						? options.title
+						: route.name;
+
+				const isFocused = state.index === index;
+
+				const onPress = () => {
+					const event = navigation.emit({
+						type: 'tabPress',
+						target: route.key,
+						canPreventDefault: true,
+					});
+
+					if (!isFocused && !event.defaultPrevented) {
+						navigation.navigate(route.name, route.params);
+					}
+				};
+
+				const onLongPress = () => {
+					navigation.emit({
+						type: 'tabLongPress',
+						target: route.key,
+					});
+				};
+
+				return (
+					<TouchableOpacity
+						key={route.key}
+						accessibilityRole='button'
+						accessibilityState={isFocused ? { selected: true } : {}}
+						accessibilityLabel={options.tabBarAccessibilityLabel}
+						testID={options.tabBarButtonTestID}
+						onPress={onPress}
+						onLongPress={onLongPress}
+						style={styles.wrapper}
+						activeOpacity={1}
+						// @ts-ignore
+						android_ripple={{
+							color: theme.text + '50',
+							borderless: true,
+						}}
+					>
+						<Animated.View
+							style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}
+						>
+							{icons[route.name]({
+								size: 20,
+								color: isFocused ? theme.text : theme.text + '50',
+							})}
+							{isFocused && (
+								<Animated.Text
+									style={{ color: theme.text }}
+									entering={FadeInRight.springify().damping(80).stiffness(200)}
+									exiting={FadeOutRight.springify().damping(80).stiffness(200)}
+								>
+									{label}
+								</Animated.Text>
+							)}
+						</Animated.View>
+					</TouchableOpacity>
+				);
+			})}
+		</Animated.View>
 	);
 }
+
+export default function TopTabs() {
+	return (
+		<Tab.Navigator tabBar={(props) => <TopTabBar {...props} />}>
+			<Tab.Screen
+				name='Home'
+				component={LibraryScreen}
+				options={{
+					tabBarLabel: 'Songs',
+				}}
+			/>
+			<Tab.Screen name='Playlist' component={Playlists} />
+			<Tab.Screen name='Artist' component={ArtistsScreen} />
+			<Tab.Screen name='Theme' component={ThemesScreen} />
+		</Tab.Navigator>
+	);
+}
+
+const styles = StyleSheet.create({
+	wrapper: {
+		display: 'flex',
+		flexDirection: 'row',
+		padding: 12,
+		alignItems: 'center',
+		justifyContent: 'center',
+		backgroundColor: 'transparent',
+		borderRadius: 15,
+		marginHorizontal: 5,
+		marginVertical: 5,
+	},
+});
