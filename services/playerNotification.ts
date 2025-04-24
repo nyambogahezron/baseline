@@ -1,91 +1,67 @@
-import TrackPlayer, {
-	AppKilledPlaybackBehavior,
-	Capability,
-} from 'react-native-track-player';
+import { Audio } from 'expo-av';
+import { NativeModules } from 'react-native';
+
+const { MusicNotification } = NativeModules;
+let soundObject: Audio.Sound | null = null;
+let currentTrack: any = null;
 
 export const setupPlayer = async () => {
-	try {
-		await TrackPlayer.setupPlayer();
-		await TrackPlayer.updateOptions({
-			android: {
-				appKilledPlaybackBehavior:
-					AppKilledPlaybackBehavior.StopPlaybackAndRemoveNotification,
-			},
-			capabilities: [
-				Capability.Play,
-				Capability.Pause,
-				Capability.SkipToNext,
-				Capability.SkipToPrevious,
-				Capability.Stop,
-			],
-			compactCapabilities: [
-				Capability.Play,
-				Capability.Pause,
-				Capability.SkipToNext,
-				Capability.SkipToPrevious,
-			],
-			notificationCapabilities: [
-				Capability.Play,
-				Capability.Pause,
-				Capability.SkipToNext,
-				Capability.SkipToPrevious,
-			],
-		});
-	} catch (error) {
-		console.error('Error setting up player:', error);
-	}
+	await Audio.setAudioModeAsync({
+		staysActiveInBackground: true,
+		playsInSilentModeIOS: true,
+		interruptionModeIOS: 1, // Audio.InterruptionMode.IOS_DO_NOT_MIX
+		interruptionModeAndroid: 1, // Audio.InterruptionMode.ANDROID_DO_NOT_MIX
+		shouldDuckAndroid: true,
+		playThroughEarpieceAndroid: false,
+	});
 };
 
 export const addTrack = async (track: any) => {
-	try {
-		await TrackPlayer.add({
-			id: track.id,
-			url: track.url,
-			title: track.title,
-			artist: track.artist,
-			artwork: track.artwork,
-		});
-	} catch (error) {
-		console.error('Error adding track:', error);
+	if (soundObject) {
+		await soundObject.unloadAsync();
+		soundObject = null;
 	}
+	currentTrack = track;
+	soundObject = new Audio.Sound();
+	await soundObject.loadAsync({ uri: track.url });
+
+	// Show notification with track info
+	MusicNotification.showNotification(
+		track.title || 'Unknown Title',
+		track.artist || 'Unknown Artist'
+	);
 };
 
 export const playTrack = async () => {
-	try {
-		await TrackPlayer.play();
-	} catch (error) {
-		console.error('Error playing track:', error);
+	if (soundObject) {
+		await soundObject.playAsync();
+		if (currentTrack) {
+			MusicNotification.showNotification(
+				currentTrack.title || 'Unknown Title',
+				currentTrack.artist || 'Unknown Artist'
+			);
+		}
 	}
 };
 
 export const pauseTrack = async () => {
-	try {
-		await TrackPlayer.pause();
-	} catch (error) {
-		console.error('Error pausing track:', error);
-	}
-};
-
-export const skipToNext = async () => {
-	try {
-		await TrackPlayer.skipToNext();
-	} catch (error) {
-		console.error('Error skipping to next track:', error);
-	}
-};
-
-export const skipToPrevious = async () => {
-	try {
-		await TrackPlayer.skipToPrevious();
-	} catch (error) {
-		console.error('Error skipping to previous track:', error);
+	if (soundObject) {
+		await soundObject.pauseAsync();
+		if (currentTrack) {
+			MusicNotification.showNotification(
+				currentTrack.title || 'Unknown Title',
+				currentTrack.artist || 'Unknown Artist'
+			);
+		}
 	}
 };
 
 export const stopPlayer = async () => {
-	try {
-		await TrackPlayer.stop();
-	} catch (error) {
-		console.error('Error stopping player:', error);
+	if (soundObject) {
+		await soundObject.stopAsync();
+		await soundObject.unloadAsync();
+		soundObject = null;
+		currentTrack = null;
+		MusicNotification.hideNotification();
 	}
 };

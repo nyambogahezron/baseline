@@ -8,6 +8,14 @@ import * as SplashScreen from 'expo-splash-screen';
 import { setupPlayer } from '@/services/playerNotification';
 import { themes, useThemeStore } from '@/store/themeStore';
 
+import { DeviceEventEmitter } from 'react-native';
+import { playTrack, pauseTrack } from '@/services/playerNotification';
+
+DeviceEventEmitter.addListener('onPlay', playTrack);
+DeviceEventEmitter.addListener('onPause', pauseTrack);
+DeviceEventEmitter.addListener('onNext', () => {});
+DeviceEventEmitter.addListener('onPrev', () => {});
+
 SplashScreen.preventAutoHideAsync();
 
 SplashScreen.setOptions({

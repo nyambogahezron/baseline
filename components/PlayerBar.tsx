@@ -20,13 +20,12 @@ import Animated, {
 	withSequence,
 	withTiming,
 	Easing,
-	useAnimatedGestureHandler,
 	useSharedValue,
 	runOnJS,
 	withRepeat,
 	withDelay,
 } from 'react-native-reanimated';
-import { PanGestureHandler } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { usePlayerStore } from '@/store/playerStore';
 import { useThemeStore, themes } from '@/store/themeStore';
 import React from 'react';
@@ -57,42 +56,20 @@ export default function PlayerBar() {
 	const titleWidth = useSharedValue(0);
 	const containerWidth = useSharedValue(0);
 
-	const gestureHandler = useAnimatedGestureHandler({
-		onStart: (_, ctx: any) => {
+	const ctx = {
+		startX: 0,
+		startY: 0,
+	};
+
+	const panGesture = Gesture.Pan()
+		.onStart(() => {
 			ctx.startX = contentTranslateX.value;
 			ctx.startY = barTranslateY.value;
-		},
-		onActive: (event, ctx) => {
-			// Only move content horizontally
-			contentTranslateX.value = ctx.startX + event.translationX;
-			// Move entire bar vertically
+		})
+		.onUpdate((event) => {
 			barTranslateY.value = ctx.startY + event.translationY;
-		},
-		onEnd: (event) => {
-			// Horizontal swipe for track navigation
-			if (
-				Math.abs(event.velocityX) > SWIPE_VELOCITY_THRESHOLD ||
-				Math.abs(contentTranslateX.value) > SWIPE_THRESHOLD
-			) {
-				if (contentTranslateX.value > 0) {
-					runOnJS(previousTrack)();
-				} else {
-					runOnJS(nextTrack)();
-				}
-				// Animate content back to center
-				contentTranslateX.value = withSpring(0, {
-					damping: 20,
-					stiffness: 200,
-				});
-			} else {
-				// Reset content position if not enough swipe
-				contentTranslateX.value = withSpring(0, {
-					damping: 20,
-					stiffness: 200,
-				});
-			}
-
-			// Vertical swipe for full screen
+		})
+		.onEnd((event) => {
 			if (
 				Math.abs(event.velocityY) > SWIPE_VELOCITY_THRESHOLD ||
 				Math.abs(barTranslateY.value) > SWIPE_THRESHOLD
@@ -100,20 +77,17 @@ export default function PlayerBar() {
 				if (barTranslateY.value < 0) {
 					runOnJS(showFullScreen)();
 				}
-				// Reset bar position
 				barTranslateY.value = withSpring(0, {
 					damping: 20,
 					stiffness: 200,
 				});
 			} else {
-				// Reset bar position if not enough swipe
 				barTranslateY.value = withSpring(0, {
 					damping: 20,
 					stiffness: 200,
 				});
 			}
-		},
-	});
+		});
 
 	const contentStyle = useAnimatedStyle(() => ({
 		transform: [{ translateX: contentTranslateX.value }],
@@ -186,7 +160,7 @@ export default function PlayerBar() {
 	};
 
 	return (
-		<PanGestureHandler onGestureEvent={gestureHandler}>
+		<GestureDetector gesture={panGesture}>
 			<Animated.View
 				style={[
 					styles.container,
@@ -280,14 +254,14 @@ export default function PlayerBar() {
 					</View>
 				</Animated.View>
 			</Animated.View>
-		</PanGestureHandler>
+		</GestureDetector>
 	);
 }
 
 const styles = StyleSheet.create({
 	container: {
 		position: 'absolute',
-		bottom: 49,
+		bottom: 0,
 		left: 0,
 		right: 0,
 		padding: 12,
